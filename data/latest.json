@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "lastUpdated": "2026-05-04T21:42:05.714Z",
+    "monthsLoaded": [
+      "2026-05"
+    ]
+  },
+  "clients": {
+    "cliente_ejemplo_1": {
+      "id": "cliente_ejemplo_1",
+      "displayName": "Cliente Ejemplo 1",
+      "type": "empresa",
+      "monthlyData": {
+        "2026-05": 25
+      },
+      "historicalAvg": 25,
+      "createdAt": "2026-05-04T17:41:00.000Z",
+      "aliases": []
+    },
+    "cliente_ejemplo_2": {
+      "id": "cliente_ejemplo_2",
+      "displayName": "Cliente Ejemplo 2",
+      "type": "residencial",
+      "monthlyData": {
+        "2026-05": 18
+      },
+      "historicalAvg": 18,
+      "createdAt": "2026-05-04T17:41:00.000Z",
+      "aliases": []
+    }
+  },
+  "mergeHistory": []
+}
