@@ -1190,7 +1190,7 @@
                 });
             },
 
-            commitImport() {
+            async commitImport() {
                 const months = this.pendingImport.months || [];
 
                 // Clear existing data for months being overwritten
@@ -1253,7 +1253,7 @@
                 });
                 this.currentData.metadata.monthsLoaded.sort();
 
-                DataStore.save(this.currentData);
+                await DataStore.save(this.currentData);
 
                 const created = this.pendingImport.matches.filter(m => m.decision === 'create').length;
                 const merged = this.pendingImport.matches.filter(m => m.decision === 'merge').length;
@@ -1608,7 +1608,7 @@
                 this._editingClientId = null;
             },
 
-            saveClientModal() {
+            async saveClientModal() {
                 const id = this._editingClientId;
                 if (!id) return;
                 const client = this.currentData.clients[id];
@@ -1625,7 +1625,7 @@
                 });
 
                 this.recalculateAvg(id);
-                DataStore.save(this.currentData);
+                await DataStore.save(this.currentData);
                 this.render();
                 this.closeClientModal();
             },
