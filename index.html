@@ -11,6 +11,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+
     <!-- Poppins Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -509,6 +514,32 @@
             }
         }
     </style>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDYBRN9apjicmL1zDQo0EgoOYGYHRCQoyE",
+            authDomain: "elock-usabilidad.firebaseapp.com",
+            projectId: "elock-usabilidad",
+            storageBucket: "elock-usabilidad.firebaseappstorage.app",
+            messagingSenderId: "26589979171714",
+            appId: "1:2658997917714:web:5c519ea849079404d8c83b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Enable offline persistence (optional, but useful)
+        db.enablePersistence().catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Firebase: Multiple tabs open, persistence disabled');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Firebase: Persistence not supported in this browser');
+            }
+        });
+    </script>
 </head>
 <body>
     <!-- HEADER & TABS -->
