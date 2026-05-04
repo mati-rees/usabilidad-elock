@@ -1,0 +1,31 @@
+# Netlify configuration
+# Serve all static files including JSON data
+
+[build]
+  # Directory to deploy (current directory - all files)
+  publish = "."
+  # No build command needed - static site
+  command = ""
+
+# Headers for cache control
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Allow all MIME types
+    Access-Control-Allow-Origin = "*"
+    # Cache static assets
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/data/*.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=300"
+
+# Redirect rules
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = { Role = ["admin"] }
