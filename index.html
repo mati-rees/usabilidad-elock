@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elock — Dashboard de Usabilidad</title>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Poppins Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color-black: #000000;
+            --color-yellow: #FEE632;
+            --color-teal: #39B3A1;
+            --color-dark-bg: #0d0d0d;
+            --color-card-bg: #1a1a1a;
+            --color-border: #2a2a2a;
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #cccccc;
+            --color-text-muted: #888888;
+            --color-alert-green: #4ade80;
+            --color-alert-yellow: #facc15;
+            --color-alert-red: #ff6b6b;
+            --color-alert-gray: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--color-dark-bg);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+        }
+
+        /* ===== HEADER & TABS ===== */
+        .header {
+            background: var(--color-black);
+            border-bottom: 2px solid var(--color-yellow);
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-yellow);
+            letter-spacing: 1px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            flex: 1;
+            margin-left: 30px;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: var(--color-text-muted);
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            color: var(--color-text-secondary);
+        }
+
+        .tab-btn.active {
+            color: var(--color-yellow);
+            border-bottom-color: var(--color-yellow);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: var(--color-yellow);
+            color: var(--color-black);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .btn-primary:hover {
+            background: #ffea00;
+            transform: translateY(-1px);
+        }
+
+        /* ===== MAIN CONTAINER ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ===== TAB PANELS ===== */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ===== DASHBOARD TAB ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-yellow);
+            margin-bottom: 5px;
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .kpi-change.positive {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--color-alert-green);
+        }
+
+        .kpi-change.negative {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--color-alert-red);
+        }
+
+        .chart-container {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            height: 300px;
+        }
+
+        .clients-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .clients-table thead {
+            background: #111;
+        }
+
+        .clients-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .clients-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 13px;
+        }
+
+        .clients-table tr:hover {
+            background: #131313;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-green {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--color-alert-green);
+        }
+
+        .status-gray {
+            background: rgba(107, 114, 128, 0.2);
+            color: var(--color-alert-gray);
+        }
+
+        .status-yellow {
+            background: rgba(250, 204, 21, 0.2);
+            color: var(--color-alert-yellow);
+        }
+
+        .status-red {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--color-alert-red);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            vertical-align: middle;
+        }
+        .status-dot-green  { background: var(--color-alert-green); }
+        .status-dot-gray   { background: var(--color-alert-gray); }
+        .status-dot-yellow { background: var(--color-alert-yellow); }
+        .status-dot-red    { background: var(--color-alert-red); }
+
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .filter-bar label {
+            font-size: 12px;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .filter-select {
+            background: #111;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            color: var(--color-text-secondary);
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .filter-select:focus { outline: 1px solid var(--color-yellow); }
+
+        .table-scroll-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+        .table-scroll-wrapper .clients-table {
+            border: none;
+            border-radius: 0;
+            min-width: 600px;
+        }
+        .month-cell {
+            text-align: center;
+            min-width: 70px;
+            font-size: 13px;
+        }
+        .month-cell-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .month-count {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .th-month {
+            text-align: center;
+            min-width: 70px;
+        }
+
+        /* ===== UPLOAD / CARGAR ===== */
+        .upload-zone {
+            background: var(--color-card-bg);
+            border: 3px dashed var(--color-yellow);
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-zone:hover {
+            border-color: #ffea00;
+            background: #111;
+        }
+
+        .upload-zone.dragover {
+            background: #111;
+            border-color: #ffea00;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: var(--color-text-muted);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--color-yellow);
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            color: var(--color-text-primary);
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-yellow);
+            color: var(--color-yellow);
+        }
+
+        /* ===== UTILS ===== */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .tabs {
+                margin-left: 10px;
+            }
+
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 11px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .clients-table {
+                font-size: 12px;
+            }
+
+            .clients-table th,
+            .clients-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER & TABS -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">elock</div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+                <button class="tab-btn" data-tab="clientes">Clientes</button>
+                <button class="tab-btn" data-tab="cargar">Cargar</button>
+                <button class="tab-btn" data-tab="historial">Historial</button>
+            </div>
+            <div class="header-actions">
+                <button class="btn-primary" id="exportBtn">Exportar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+        <!-- DASHBOARD TAB -->
+        <div class="tab-panel active" data-tab="dashboard">
+            <h2 style="margin-bottom: 20px;">Dashboard de Usabilidad</h2>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Retiros (Mes Actual)</div>
+                    <div class="kpi-value" id="kpiTotal">0</div>
+                    <div class="kpi-change" id="kpiTotalChange"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Clientes Activos</div>
+                    <div class="kpi-value" id="kpiClients">0</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Promedio por Cliente</div>
+                    <div class="kpi-value" id="kpiAverage">0</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">% Cambio vs Mes Anterior</div>
+                    <div class="kpi-value" id="kpiTrend">—</div>
+                </div>
+            </div>
+
+            <h3 class="section-title">Tendencia Mensual (Últimos 12 Meses)</h3>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+
+            <h3 class="section-title">Estado por Cliente</h3>
+
+            <div class="filter-bar">
+                <input type="text" id="searchCliente" placeholder="Buscar cliente..." class="filter-select"
+                    style="min-width:200px;" />
+                <label style="margin-left:8px;">Tipo:</label>
+                <select class="filter-select" id="filterTipo">
+                    <option value="all">Todos</option>
+                </select>
+                <label style="margin-left:8px;">Estado:</label>
+                <select class="filter-select" id="filterEstado">
+                    <option value="all">Todos</option>
+                    <option value="green">Verde</option>
+                    <option value="gray">Gris</option>
+                    <option value="yellow">Amarillo</option>
+                    <option value="red">Rojo</option>
+                </select>
+            </div>
+
+            <div class="table-scroll-wrapper">
+                <table class="clients-table" id="dashboardTable">
+                    <thead id="dashboardTableHead"><tr><th>Cliente</th></tr></thead>
+                    <tbody id="clientsTableBody">
+                        <tr><td class="empty-state">Cargá datos para ver clientes</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CLIENTES TAB -->
+        <div class="tab-panel" data-tab="clientes">
+            <h2 style="margin-bottom: 20px;">Clientes</h2>
+
+            <table class="clients-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Retiros (Mes)</th>
+                        <th>Promedio</th>
+                        <th>Meses Registrados</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsListBody">
+                    <tr><td colspan="6" class="empty-state">Sin datos cargados</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CARGAR TAB -->
+        <div class="tab-panel" data-tab="cargar">
+            <h2 style="margin-bottom: 20px;">Cargar Datos Mensuales</h2>
+
+            <div id="uploadStep" style="display: block;">
+                <h3 class="section-title">Paso 1: Seleccionar Archivo</h3>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Arrastra tu archivo aquí o haz click para seleccionar</div>
+                    <div class="upload-hint">Aceptamos .xlsx, .csv, .xls</div>
+                </div>
+                <input type="file" id="fileInput" accept=".xlsx,.csv,.xls">
+            </div>
+
+            <div id="monthStep" style="display: none;">
+                <h3 class="section-title">Paso 2: Confirmar Meses</h3>
+                <div id="detectedMonthsInfo"></div>
+                <div id="manualMonthRow" style="margin-top: 12px; display: none;">
+                    <input type="month" id="monthInput" class="modal-input" style="max-width: 200px;">
+                </div>
+                <button class="btn-primary" id="proceedBtn" style="margin-top: 14px;">Procesar →</button>
+            </div>
+
+            <div id="matchStep" style="display: none;">
+                <h3 class="section-title">Paso 3: Revisar Coincidencias de Clientes</h3>
+                <div id="matchesContainer"></div>
+                <div style="margin-top: 20px;">
+                    <button class="btn-primary" id="importBtn">Importar Datos</button>
+                    <button class="btn-secondary" id="cancelImportBtn" style="background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); margin-left: 10px;">Cancelar</button>
+                </div>
+            </div>
+
+            <div id="resultStep" style="display: none;">
+                <h3 class="section-title">Importación Completada</h3>
+                <div style="background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <p id="resultSummary"></p>
+                </div>
+                <button class="btn-primary" onclick="location.reload()">Cargar Otro Mes</button>
+            </div>
+        </div>
+
+        <!-- HISTORIAL TAB -->
+        <div class="tab-panel" data-tab="historial">
+            <h2 style="margin-bottom: 20px;">Historial Mensual</h2>
+
+            <table class="clients-table">
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Total Retiros</th>
+                        <th># Clientes</th>
+                        <th>Promedio/Cliente</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr><td colspan="5" class="empty-state">Sin datos cargados</td></tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top: 30px;">
+                <h3 class="section-title">Descargar Datos</h3>
+                <button class="btn-primary" id="exportJsonBtn">Descargar como JSON</button>
+                <button class="btn-primary" id="exportCsvBtn" style="background: var(--color-teal); margin-left: 10px;">Descargar como CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CLIENTE -->
+    <div id="clientModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:var(--color-card-bg); border:1px solid var(--color-border); border-radius:10px; padding:30px; width:90%; max-width:650px; max-height:85vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="color:var(--color-yellow); font-size:18px;" id="clientModalTitle">Cliente</h2>
+                <button onclick="UI.closeClientModal()" style="background:transparent; border:none; color:#888; font-size:20px; cursor:pointer;">✕</button>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                <div>
+                    <label class="modal-label">Nombre</label>
+                    <input class="modal-input" id="clientModalName" style="margin-bottom:0;">
+                </div>
+                <div>
+                    <label class="modal-label">Tipo</label>
+                    <input class="modal-input" id="clientModalType" style="margin-bottom:0;">
+                </div>
+            </div>
+
+            <label class="modal-label">Retiros por Mes</label>
+            <div id="clientModalMonthData" style="margin-bottom:20px;"></div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn-primary" onclick="UI.saveClientModal()">Guardar Cambios</button>
+                <button class="btn-primary" onclick="UI.downloadClientCSV()" style="background:var(--color-teal);">Descargar CSV</button>
+                <button class="btn-secondary" onclick="UI.closeClientModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        // ===== DATA STORE =====
+        const DataStore = {
+            KEY: 'elock_usability_data',
+
+            init() {
+                const stored = localStorage.getItem(this.KEY);
+                return stored ? JSON.parse(stored) : {
+                    metadata: {
+                        lastUpdated: new Date().toISOString(),
+                        monthsLoaded: []
+                    },
+                    clients: {},
+                    mergeHistory: []
+                };
+            },
+
+            get() {
+                return this.init();
+            },
+
+            save(data) {
+                data.metadata.lastUpdated = new Date().toISOString();
+                localStorage.setItem(this.KEY, JSON.stringify(data));
+            },
+
+            normalizeClientId(name) {
+                return name
+                    .toLowerCase()
+                    .trim()
+                    .replace(/\s+/g, '_')
+                    .replace(/[^\w_]/g, '')
+                    .substring(0, 50);
+            }
+        };
+
+        // ===== HELPERS =====
+        function formatMonthLabel(monthKey) {
+            const [year, month] = monthKey.split('-');
+            const names = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            return `${names[parseInt(month) - 1]} ${year}`;
+        }
+
+        // ===== CSV PARSER =====
+        const CSVParser = {
+            parseFecha(str) {
+                const m = str.match(/(\d{2})[-\/](\d{2})[-\/](\d{4})/);
+                return m ? `${m[3]}-${m[2]}` : null;
+            },
+
+            parse(csvData) {
+                return new Promise((resolve, reject) => {
+                    Papa.parse(csvData, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            const parsed = results.data.map(row => {
+                                const fecha = row['Creado'] || row['creado'] || '';
+                                return {
+                                    cliente: row['Cliente'] || row['cliente'] || '',
+                                    tipo: row['Tipo Empresa'] || row['tipo_empresa'] || 'Desconocido',
+                                    fecha,
+                                    monthKey: CSVParser.parseFecha(fecha)
+                                };
+                            }).filter(r => r.cliente);
+                            resolve(parsed);
+                        },
+                        error: (error) => reject(error)
+                    });
+                });
+            }
+        };
+
+        // ===== FUZZY MATCHING =====
+        const FuzzyMatcher = {
+            findMatches(newClientNames, existingClients, threshold = 0.6) {
+                const existingNames = Object.values(existingClients).map(c => c.displayName);
+                const matches = [];
+
+                newClientNames.forEach(newName => {
+                    const fuse = new Fuse(existingNames, { threshold: 1 - threshold });
+                    const searchResults = fuse.search(newName);
+
+                    if (searchResults.length > 0) {
+                        const topMatch = searchResults[0];
+                        const matchedName = topMatch.item;
+                        const matchedClient = Object.values(existingClients).find(c => c.displayName === matchedName);
+
+                        matches.push({
+                            newName,
+                            suggestedClient: matchedClient,
+                            confidence: Math.round((1 - topMatch.score) * 100),
+                            options: 'merge'
+                        });
+                    } else {
+                        matches.push({
+                            newName,
+                            suggestedClient: null,
+                            confidence: 0,
+                            options: 'create'
+                        });
+                    }
+                });
+
+                return matches;
+            }
+        };
+
+        // ===== METRICS CALCULATOR =====
+        const MetricsCalc = {
+            calculateStatus(currentValue, historicalAvg) {
+                if (historicalAvg === 0) return 'gray';
+                const percent = (currentValue / historicalAvg) * 100;
+                if (percent >= 70) return 'green';
+                if (percent >= 50) return 'gray';
+                if (percent >= 15) return 'yellow';
+                return 'red';
+            },
+
+            getMonthKey(year, month) {
+                return `${year}-${String(month).padStart(2, '0')}`;
+            },
+
+            parseMonthInput(monthStr) {
+                const [year, month] = monthStr.split('-');
+                return { year: parseInt(year), month: parseInt(month) };
+            }
+        };
+
+        // ===== UI MANAGER =====
+        const UI = {
+            currentData: null,
+            currentMonth: null,
+            pendingImport: null,
+
+            init() {
+                this.currentData = DataStore.get();
+                this.setupEventListeners();
+                this.render();
+            },
+
+            setupEventListeners() {
+                // Tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const tabName = e.target.dataset.tab || e.currentTarget.dataset.tab;
+                        console.log('Tab clicked:', tabName);
+                        if (tabName) this.switchTab(tabName);
+                    });
+                });
+
+                // Upload
+                const uploadZone = document.getElementById('uploadZone');
+                const fileInput = document.getElementById('fileInput');
+
+                uploadZone.addEventListener('click', () => fileInput.click());
+                uploadZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.add('dragover');
+                });
+                uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+                uploadZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.remove('dragover');
+                    this.handleFileUpload(e.dataTransfer.files[0]);
+                });
+
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files[0]) this.handleFileUpload(e.target.files[0]);
+                });
+
+                const proceedBtn = document.getElementById('proceedBtn');
+                if (proceedBtn) proceedBtn.addEventListener('click', () => this.processFile());
+
+                const importBtn = document.getElementById('importBtn');
+                if (importBtn) importBtn.addEventListener('click', () => this.commitImport());
+
+                const cancelBtn = document.getElementById('cancelImportBtn');
+                if (cancelBtn) cancelBtn.addEventListener('click', () => this.resetUpload());
+
+                const exportBtn = document.getElementById('exportBtn');
+                if (exportBtn) exportBtn.addEventListener('click', () => this.exportData());
+
+                const exportJsonBtn = document.getElementById('exportJsonBtn');
+                if (exportJsonBtn) exportJsonBtn.addEventListener('click', () => this.downloadJSON());
+
+                const exportCsvBtn = document.getElementById('exportCsvBtn');
+                if (exportCsvBtn) exportCsvBtn.addEventListener('click', () => this.downloadCSV());
+
+                // Filter listeners — re-render dashboard on change
+                document.getElementById('filterTipo')?.addEventListener('change', () => this.renderDashboard());
+                document.getElementById('filterEstado')?.addEventListener('change', () => this.renderDashboard());
+                document.getElementById('searchCliente')?.addEventListener('input', () => this.renderDashboard());
+            },
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.tab-panel[data-tab="${tabName}"]`).classList.add('active');
+                document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+            },
+
+            async handleFileUpload(file) {
+                try {
+                    let parsed;
+                    const ext = file.name.split('.').pop().toLowerCase();
+
+                    if (ext === 'xlsx' || ext === 'xls') {
+                        const buffer = await file.arrayBuffer();
+                        const workbook = XLSX.read(buffer, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                        parsed = rows.map(row => {
+                            const fecha = String(row['Creado'] || row['creado'] || '');
+                            return {
+                                cliente: row['Cliente'] || row['cliente'] || '',
+                                tipo: row['Tipo Empresa'] || row['tipo_empresa'] || 'Desconocido',
+                                fecha,
+                                monthKey: CSVParser.parseFecha(fecha)
+                            };
+                        }).filter(r => r.cliente);
+                    } else {
+                        const text = await file.text();
+                        parsed = await CSVParser.parse(text);
+                    }
+
+                    this.pendingImport = { raw: parsed, fileName: file.name };
+
+                    const months = [...new Set(parsed.map(r => r.monthKey).filter(Boolean))].sort();
+                    this.pendingImport.months = months.length ? months : null;
+
+                    const infoEl = document.getElementById('detectedMonthsInfo');
+                    const manualRow = document.getElementById('manualMonthRow');
+
+                    if (months.length > 1) {
+                        infoEl.innerHTML = `
+                            <p style="color:var(--color-text-secondary);margin-bottom:8px;">
+                                Se detectaron <strong style="color:var(--color-yellow);">${months.length} meses</strong> en el archivo:
+                            </p>
+                            <p style="color:var(--color-teal);font-size:14px;">${months.map(formatMonthLabel).join(', ')}</p>
+                            <p style="color:var(--color-text-muted);font-size:12px;margin-top:6px;">Se importarán todos automáticamente.</p>`;
+                        manualRow.style.display = 'none';
+                    } else if (months.length === 1) {
+                        infoEl.innerHTML = `<p style="color:var(--color-text-secondary);">Mes detectado: <strong style="color:var(--color-yellow);">${formatMonthLabel(months[0])}</strong></p>`;
+                        manualRow.style.display = 'none';
+                    } else {
+                        infoEl.innerHTML = `<p style="color:var(--color-text-muted);font-size:12px;">No se detectaron fechas. Selecciona el mes manualmente:</p>`;
+                        manualRow.style.display = 'block';
+                        const today = new Date();
+                        document.getElementById('monthInput').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                    }
+
+                    document.getElementById('uploadStep').style.display = 'none';
+                    document.getElementById('monthStep').style.display = 'block';
+                } catch (err) {
+                    alert('Error al procesar archivo: ' + err.message);
+                }
+            },
+
+            processFile() {
+                if (!this.pendingImport.months) {
+                    const monthStr = document.getElementById('monthInput').value;
+                    if (!monthStr) { alert('Selecciona un mes'); return; }
+                    this.pendingImport.months = [monthStr];
+                }
+
+                const grouped = {};
+                this.pendingImport.raw.forEach(row => {
+                    const clientId = DataStore.normalizeClientId(row.cliente);
+                    grouped[clientId] = { displayName: row.cliente, type: row.tipo };
+                });
+
+                const matches = FuzzyMatcher.findMatches(
+                    Object.keys(grouped).map(id => grouped[id].displayName),
+                    this.currentData.clients
+                );
+
+                this.renderMatches(matches, grouped);
+                document.getElementById('monthStep').style.display = 'none';
+                document.getElementById('matchStep').style.display = 'block';
+            },
+
+            renderMatches(matches, grouped) {
+                const container = document.getElementById('matchesContainer');
+                container.innerHTML = '';
+
+                const matchesWithMerge = matches.map((match, idx) => ({
+                    ...match,
+                    decision: 'create',
+                    groupedData: grouped[DataStore.normalizeClientId(match.newName)]
+                }));
+
+                this.pendingImport.matches = matchesWithMerge;
+
+                matchesWithMerge.forEach((match, idx) => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'background: #111; padding: 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #2a2a2a;';
+
+                    const suggestedText = match.suggestedClient
+                        ? `<strong>${match.suggestedClient.displayName}</strong> (${match.confidence}% match)`
+                        : 'No hay sugerencia';
+
+                    div.innerHTML = `
+                        <div style="margin-bottom: 10px;">
+                            <strong style="color: #FEE632;">${match.newName}</strong>
+                            <div style="font-size: 12px; color: #888; margin-top: 4px;">Tipo: ${match.groupedData.type}</div>
+                        </div>
+                        <div style="font-size: 12px; margin-bottom: 10px;">
+                            Sugerencia: ${suggestedText}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            ${match.suggestedClient ? `
+                                <button class="btn-primary" style="padding: 6px 12px; flex: 1;" onclick="UI.pendingImport.matches[${idx}].decision = 'merge'; this.style.background = 'var(--color-teal)'; this.textContent = '✓ Merge con ' + '${match.suggestedClient.displayName.substring(0, 15)}';">
+                                    Merge
+                                </button>
+                            ` : ''}
+                            <button class="btn-secondary" style="padding: 6px 12px; flex: 1;" onclick="UI.pendingImport.matches[${idx}].decision = 'create'; this.style.background = 'var(--color-yellow)'; this.style.color = 'var(--color-black)'; this.textContent = '✓ Crear nuevo';">
+                                Crear
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+
+            commitImport() {
+                const months = this.pendingImport.months || [];
+
+                // Build per-client, per-month counts
+                const countByClientMonth = {};
+                this.pendingImport.raw.forEach(row => {
+                    const name = row.cliente;
+                    const mKey = row.monthKey || months[0];
+                    if (!mKey) return;
+                    if (!countByClientMonth[name]) countByClientMonth[name] = {};
+                    countByClientMonth[name][mKey] = (countByClientMonth[name][mKey] || 0) + 1;
+                });
+
+                const decisions = {};
+                this.pendingImport.matches.forEach(match => {
+                    decisions[match.newName] = match.decision === 'merge' ? match.suggestedClient.id : null;
+                });
+
+                this.pendingImport.matches.forEach(match => {
+                    const clientMonthData = countByClientMonth[match.newName] || {};
+                    const decision = decisions[match.newName];
+
+                    if (decision) {
+                        // Merge into existing client
+                        const clientId = decision;
+                        Object.entries(clientMonthData).forEach(([mKey, count]) => {
+                            this.currentData.clients[clientId].monthlyData[mKey] = count;
+                        });
+                        this.recalculateAvg(clientId);
+                    } else {
+                        // Create new client
+                        const clientId = DataStore.normalizeClientId(match.newName);
+                        this.currentData.clients[clientId] = {
+                            id: clientId,
+                            displayName: match.newName,
+                            type: match.groupedData.type,
+                            monthlyData: { ...clientMonthData },
+                            historicalAvg: 0,
+                            createdAt: new Date().toISOString(),
+                            aliases: []
+                        };
+                        this.recalculateAvg(clientId);
+                    }
+                });
+
+                months.forEach(mKey => {
+                    if (!this.currentData.metadata.monthsLoaded.includes(mKey)) {
+                        this.currentData.metadata.monthsLoaded.push(mKey);
+                    }
+                });
+                this.currentData.metadata.monthsLoaded.sort();
+
+                DataStore.save(this.currentData);
+
+                const created = this.pendingImport.matches.filter(m => m.decision === 'create').length;
+                const merged = this.pendingImport.matches.filter(m => m.decision === 'merge').length;
+                const monthLabels = months.map(formatMonthLabel).join(', ');
+
+                document.getElementById('matchStep').style.display = 'none';
+                document.getElementById('resultStep').style.display = 'block';
+                document.getElementById('resultSummary').innerHTML = `
+                    <p>✓ <strong>${created}</strong> cliente(s) nuevo(s) creado(s)</p>
+                    <p>✓ <strong>${merged}</strong> cliente(s) actualizado(s)</p>
+                    <p>✓ <strong>${this.pendingImport.raw.length.toLocaleString()}</strong> retiros importados</p>
+                    <p>✓ Meses: <strong>${monthLabels}</strong></p>
+                `;
+
+                this.render();
+                this.pendingImport = null;
+            },
+
+            recalculateAvg(clientId) {
+                const client = this.currentData.clients[clientId];
+                const values = Object.values(client.monthlyData);
+                client.historicalAvg = values.length > 0
+                    ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+                    : 0;
+            },
+
+            resetUpload() {
+                document.getElementById('uploadStep').style.display = 'block';
+                document.getElementById('monthStep').style.display = 'none';
+                document.getElementById('matchStep').style.display = 'none';
+                document.getElementById('resultStep').style.display = 'none';
+                document.getElementById('fileInput').value = '';
+                this.pendingImport = null;
+            },
+
+            render() {
+                this.renderDashboard();
+                this.renderClientsList();
+                this.renderHistory();
+            },
+
+            renderDashboard() {
+                const allMonths = this.currentData.metadata.monthsLoaded;
+                const latestMonth = allMonths.length > 0 ? allMonths[allMonths.length - 1] : null;
+
+                // Build display range: always start 2026-01
+                const startMonth = '2026-01';
+                const endMonth = latestMonth || startMonth;
+                const displayMonths = [];
+                let cur = startMonth;
+                while (cur <= endMonth) {
+                    displayMonths.push(cur);
+                    const [y, mo] = cur.split('-').map(Number);
+                    cur = mo === 12 ? `${y+1}-01` : `${y}-${String(mo+1).padStart(2,'0')}`;
+                }
+
+                if (!latestMonth) {
+                    document.getElementById('clientsTableBody').innerHTML =
+                        `<tr><td colspan="4" class="empty-state">📊 Cargá datos para ver el dashboard</td></tr>`;
+                    return;
+                }
+
+                // KPIs based on latest month
+                let totalRetiros = 0, clientCount = 0;
+                const allClients = Object.values(this.currentData.clients)
+                    .filter(c => Object.keys(c.monthlyData).length > 0);
+
+                allClients.forEach(c => {
+                    totalRetiros += c.monthlyData[latestMonth] || 0;
+                    clientCount++;
+                });
+
+                document.getElementById('kpiTotal').textContent = totalRetiros.toLocaleString();
+                document.getElementById('kpiClients').textContent = clientCount;
+                document.getElementById('kpiAverage').textContent = clientCount > 0
+                    ? Math.round(totalRetiros / clientCount) : 0;
+
+                if (allMonths.length > 1) {
+                    const prevMonth = allMonths[allMonths.length - 2];
+                    let prevTotal = 0;
+                    allClients.forEach(c => { prevTotal += c.monthlyData[prevMonth] || 0; });
+                    const change = prevTotal > 0 ? ((totalRetiros - prevTotal) / prevTotal * 100).toFixed(1) : 0;
+                    const changeEl = document.getElementById('kpiTotalChange');
+                    changeEl.className = change >= 0 ? 'kpi-change positive' : 'kpi-change negative';
+                    changeEl.textContent = `${change > 0 ? '+' : ''}${change}%`;
+                } else {
+                    document.getElementById('kpiTotalChange').textContent = '—';
+                }
+
+                this.renderTrendChart(displayMonths);
+
+                // Dynamic table header
+                const thead = document.getElementById('dashboardTableHead');
+                thead.innerHTML = `<tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    ${displayMonths.map(m => `<th class="th-month">${formatMonthLabel(m)}</th>`).join('')}
+                    <th class="th-month">Promedio</th>
+                </tr>`;
+
+                // Populate Tipo filter dynamically from data (preserve current selection)
+                const tipoSelect = document.getElementById('filterTipo');
+                const prevTipo = tipoSelect?.value || 'all';
+                const uniqueTypes = [...new Set(allClients.map(c => c.type.toLowerCase()).filter(Boolean))].sort();
+                if (tipoSelect) {
+                    tipoSelect.innerHTML = '<option value="all">Todos</option>' +
+                        uniqueTypes.map(t => `<option value="${t}"${prevTipo === t ? ' selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
+                }
+
+                // Read filters
+                const filterTipo   = tipoSelect?.value || 'all';
+                const filterEstado = document.getElementById('filterEstado')?.value || 'all';
+                const searchTerm   = (document.getElementById('searchCliente')?.value || '').toLowerCase().trim();
+
+                // Helper: overall client status (avg < 20 always red)
+                const clientStatus = c => {
+                    if (c.historicalAvg < 20) return 'red';
+                    const last = c.monthlyData[latestMonth] || 0;
+                    return MetricsCalc.calculateStatus(last, c.historicalAvg);
+                };
+
+                // Filter and render rows
+                const tbody = document.getElementById('clientsTableBody');
+                let filtered = allClients;
+
+                if (filterTipo !== 'all') {
+                    filtered = filtered.filter(c => c.type.toLowerCase() === filterTipo);
+                }
+                if (filterEstado !== 'all') {
+                    filtered = filtered.filter(c => clientStatus(c) === filterEstado);
+                }
+                if (searchTerm) {
+                    filtered = filtered.filter(c => c.displayName.toLowerCase().includes(searchTerm));
+                }
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${2 + displayMonths.length + 1}" class="empty-state">Sin clientes con esos filtros</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = filtered.map(client => {
+                    const cells = displayMonths.map(m => {
+                        const val = client.monthlyData[m];
+                        if (val === undefined) return `<td class="month-cell" style="color:#444;">—</td>`;
+                        const status = client.historicalAvg < 20 ? 'red' : MetricsCalc.calculateStatus(val, client.historicalAvg);
+                        return `<td class="month-cell">
+                            <div class="month-cell-inner">
+                                <span class="status-dot status-dot-${status}"></span>
+                                <span class="month-count">${val}</span>
+                            </div>
+                        </td>`;
+                    }).join('');
+                    const avgColor = client.historicalAvg < 20 ? 'var(--color-alert-red)' : 'var(--color-text-primary)';
+                    return `<tr>
+                        <td><strong>${client.displayName}</strong></td>
+                        <td>${client.type}</td>
+                        ${cells}
+                        <td class="month-cell"><strong style="color:${avgColor}">${client.historicalAvg}</strong></td>
+                    </tr>`;
+                }).join('');
+            },
+
+            renderTrendChart(months) {
+                const canvasEl = document.getElementById('trendChart');
+                if (!canvasEl) return;
+
+                const chartData = months.map(month => {
+                    let total = 0;
+                    Object.values(this.currentData.clients).forEach(client => {
+                        total += client.monthlyData[month] || 0;
+                    });
+                    return total;
+                });
+
+                const ctx = canvasEl.getContext('2d');
+                if (window.trendChartInstance) {
+                    window.trendChartInstance.destroy();
+                }
+
+                window.trendChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months.map(m => {
+                            const [year, month] = m.split('-');
+                            return new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
+                        }),
+                        datasets: [{
+                            label: 'Retiros',
+                            data: chartData,
+                            backgroundColor: months.map((m, i) => i === months.length - 1 ? '#FEE632' : '#39B3A1'),
+                            borderColor: '#FEE632',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            filler: { propagate: true }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#888' },
+                                grid: { color: '#222' }
+                            },
+                            x: {
+                                ticks: { color: '#888' },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderClientsList() {
+                const tbody = document.getElementById('clientsListBody');
+                const clients = Object.values(this.currentData.clients).filter(c => Object.keys(c.monthlyData).length > 0);
+
+                if (clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin clientes registrados</td></tr>';
+                    return;
+                }
+
+                const currentMonth = this.currentData.metadata.monthsLoaded[this.currentData.metadata.monthsLoaded.length - 1];
+                tbody.innerHTML = clients.map(client => {
+                    const last = client.monthlyData[currentMonth] || 0;
+                    const status = MetricsCalc.calculateStatus(last, client.historicalAvg);
+                    return `<tr>
+                        <td><strong>${client.displayName}</strong></td>
+                        <td>${client.type}</td>
+                        <td>${last || '—'}</td>
+                        <td>${client.historicalAvg}</td>
+                        <td>${Object.keys(client.monthlyData).length}</td>
+                        <td>
+                            <span class="status-dot status-dot-${status}" style="margin-right:8px;"></span>
+                            <button class="btn-secondary" style="padding:4px 8px;font-size:11px;"
+                                onclick="UI.openClientModal('${client.id}')">Ver / Editar</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            },
+
+            renderHistory() {
+                const tbody = document.getElementById('historyTableBody');
+                const months = this.currentData.metadata.monthsLoaded;
+
+                if (months.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sin historial</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = months.map(month => {
+                    let total = 0, clientCount = 0;
+                    Object.values(this.currentData.clients).forEach(client => {
+                        if (client.monthlyData[month]) {
+                            total += client.monthlyData[month];
+                            clientCount++;
+                        }
+                    });
+                    const [year, m] = month.split('-');
+                    const monthName = new Date(year, m - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+                    return `
+                        <tr>
+                            <td><strong>${monthName}</strong></td>
+                            <td>${total.toLocaleString()}</td>
+                            <td>${clientCount}</td>
+                            <td>${clientCount > 0 ? Math.round(total / clientCount * 10) / 10 : '—'}</td>
+                            <td><button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">Detalles</button></td>
+                        </tr>
+                    `;
+                }).join('');
+            },
+
+            downloadJSON() {
+                const dataStr = JSON.stringify(this.currentData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `elock-usabilidad-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+            },
+
+            downloadCSV() {
+                const months = this.currentData.metadata.monthsLoaded;
+                const rows = [['Cliente', 'Tipo', ...months]];
+
+                Object.values(this.currentData.clients).forEach(client => {
+                    const row = [client.displayName, client.type];
+                    months.forEach(month => {
+                        row.push(client.monthlyData[month] || 0);
+                    });
+                    rows.push(row);
+                });
+
+                const csv = rows.map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `elock-usabilidad-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+            },
+
+            exportData() {
+                alert('Usa la sección "Historial" para descargar datos en diferentes formatos');
+            },
+
+            openClientModal(clientId) {
+                const client = this.currentData.clients[clientId];
+                if (!client) return;
+                this._editingClientId = clientId;
+
+                document.getElementById('clientModalTitle').textContent = client.displayName;
+                document.getElementById('clientModalName').value = client.displayName;
+                document.getElementById('clientModalType').value = client.type;
+
+                const months = Object.keys(client.monthlyData).sort();
+                const dataEl = document.getElementById('clientModalMonthData');
+                dataEl.innerHTML = months.length === 0
+                    ? '<p style="color:#888;font-size:13px;">Sin datos de meses.</p>'
+                    : `<table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="text-align:left;font-size:11px;color:#888;padding:6px 8px;border-bottom:1px solid #2a2a2a;">Mes</th>
+                            <th style="text-align:right;font-size:11px;color:#888;padding:6px 8px;border-bottom:1px solid #2a2a2a;">Retiros</th>
+                        </tr></thead>
+                        <tbody>
+                            ${months.map(m => `<tr>
+                                <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #1a1a1a;">${formatMonthLabel(m)}</td>
+                                <td style="padding:6px 8px;text-align:right;">
+                                    <input type="number" min="0"
+                                        data-month="${m}"
+                                        value="${client.monthlyData[m]}"
+                                        style="width:80px;background:#111;border:1px solid #2a2a2a;border-radius:4px;
+                                               color:#fff;font-family:Poppins,sans-serif;font-size:13px;
+                                               padding:4px 8px;text-align:right;"
+                                        class="client-month-input">
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+
+                const modal = document.getElementById('clientModal');
+                modal.style.display = 'flex';
+            },
+
+            closeClientModal() {
+                document.getElementById('clientModal').style.display = 'none';
+                this._editingClientId = null;
+            },
+
+            saveClientModal() {
+                const id = this._editingClientId;
+                if (!id) return;
+                const client = this.currentData.clients[id];
+
+                const newName = document.getElementById('clientModalName').value.trim();
+                const newType = document.getElementById('clientModalType').value.trim();
+                if (newName) client.displayName = newName;
+                if (newType) client.type = newType;
+
+                document.querySelectorAll('.client-month-input').forEach(input => {
+                    const month = input.dataset.month;
+                    const val = parseInt(input.value, 10);
+                    if (!isNaN(val) && val >= 0) client.monthlyData[month] = val;
+                });
+
+                this.recalculateAvg(id);
+                DataStore.save(this.currentData);
+                this.render();
+                this.closeClientModal();
+            },
+
+            downloadClientCSV() {
+                const id = this._editingClientId;
+                if (!id) return;
+                const client = this.currentData.clients[id];
+                const months = Object.keys(client.monthlyData).sort();
+                const rows = [['Mes', 'Retiros'], ...months.map(m => [formatMonthLabel(m), client.monthlyData[m]])];
+                const csv = rows.map(r => r.join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${client.displayName.replace(/\s+/g,'-')}-usabilidad.csv`;
+                a.click();
+            }
+        };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => UI.init());
+    </script>
+</body>
+</html>
