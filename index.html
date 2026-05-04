@@ -623,10 +623,18 @@
             </div>
 
             <div id="monthStep" style="display: none;">
-                <h3 class="section-title">Paso 2: Confirmar Meses</h3>
+                <h3 class="section-title">Paso 2: Seleccionar Mes</h3>
                 <div id="detectedMonthsInfo"></div>
-                <div id="manualMonthRow" style="margin-top: 12px; display: none;">
+                <div style="margin-top: 12px;">
+                    <label class="modal-label">Mes a importar</label>
                     <input type="month" id="monthInput" class="modal-input" style="max-width: 200px;">
+                </div>
+                <div id="overwriteWarning" style="display: none; background: rgba(255,107,107,0.1); border: 1px solid var(--color-alert-red); border-radius: 6px; padding: 15px; margin-top: 14px;">
+                    <p id="overwriteWarningMsg" style="color: var(--color-alert-red); font-size: 14px; margin-bottom: 12px;"></p>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" id="confirmOverwriteBtn">Sí, sobreescribir</button>
+                        <button class="btn-secondary" id="cancelOverwriteBtn">No, cancelar</button>
+                    </div>
                 </div>
                 <button class="btn-primary" id="proceedBtn" style="margin-top: 14px;">Procesar →</button>
             </div>
@@ -887,6 +895,19 @@
                 const cancelBtn = document.getElementById('cancelImportBtn');
                 if (cancelBtn) cancelBtn.addEventListener('click', () => this.resetUpload());
 
+                const confirmOverwriteBtn = document.getElementById('confirmOverwriteBtn');
+                if (confirmOverwriteBtn) confirmOverwriteBtn.addEventListener('click', () => {
+                    document.getElementById('overwriteWarning').style.display = 'none';
+                    document.getElementById('proceedBtn').style.display = '';
+                    this._doProcessFile(this.pendingImport._pendingMonths);
+                });
+
+                const cancelOverwriteBtn = document.getElementById('cancelOverwriteBtn');
+                if (cancelOverwriteBtn) cancelOverwriteBtn.addEventListener('click', () => {
+                    document.getElementById('overwriteWarning').style.display = 'none';
+                    document.getElementById('proceedBtn').style.display = '';
+                });
+
                 const exportBtn = document.getElementById('exportBtn');
                 if (exportBtn) exportBtn.addEventListener('click', () => this.exportData());
 
@@ -939,7 +960,8 @@
                     this.pendingImport.months = months.length ? months : null;
 
                     const infoEl = document.getElementById('detectedMonthsInfo');
-                    const manualRow = document.getElementById('manualMonthRow');
+                    const today = new Date();
+                    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
                     if (months.length > 1) {
                         infoEl.innerHTML = `
@@ -948,17 +970,17 @@
                             </p>
                             <p style="color:var(--color-teal);font-size:14px;">${months.map(formatMonthLabel).join(', ')}</p>
                             <p style="color:var(--color-text-muted);font-size:12px;margin-top:6px;">Se importarán todos automáticamente.</p>`;
-                        manualRow.style.display = 'none';
+                        document.getElementById('monthInput').value = months[months.length - 1];
                     } else if (months.length === 1) {
-                        infoEl.innerHTML = `<p style="color:var(--color-text-secondary);">Mes detectado: <strong style="color:var(--color-yellow);">${formatMonthLabel(months[0])}</strong></p>`;
-                        manualRow.style.display = 'none';
+                        infoEl.innerHTML = `<p style="color:var(--color-text-muted);font-size:12px;">Mes detectado del archivo. Podés ajustar si es necesario:</p>`;
+                        document.getElementById('monthInput').value = months[0];
                     } else {
-                        infoEl.innerHTML = `<p style="color:var(--color-text-muted);font-size:12px;">No se detectaron fechas. Selecciona el mes manualmente:</p>`;
-                        manualRow.style.display = 'block';
-                        const today = new Date();
-                        document.getElementById('monthInput').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                        infoEl.innerHTML = `<p style="color:var(--color-text-muted);font-size:12px;">No se detectaron fechas en el archivo. Seleccioná el mes manualmente:</p>`;
+                        document.getElementById('monthInput').value = currentMonthStr;
                     }
 
+                    document.getElementById('overwriteWarning').style.display = 'none';
+                    document.getElementById('proceedBtn').style.display = '';
                     document.getElementById('uploadStep').style.display = 'none';
                     document.getElementById('monthStep').style.display = 'block';
                 } catch (err) {
@@ -967,11 +989,29 @@
             },
 
             processFile() {
-                if (!this.pendingImport.months) {
-                    const monthStr = document.getElementById('monthInput').value;
-                    if (!monthStr) { alert('Selecciona un mes'); return; }
-                    this.pendingImport.months = [monthStr];
+                const monthStr = document.getElementById('monthInput').value;
+                if (!monthStr) { alert('Seleccioná un mes'); return; }
+
+                const months = this.pendingImport.months && this.pendingImport.months.length > 1
+                    ? this.pendingImport.months
+                    : [monthStr];
+
+                const conflicting = months.filter(m => this.currentData.metadata.monthsLoaded.includes(m));
+                if (conflicting.length > 0) {
+                    const names = conflicting.map(formatMonthLabel).join(', ');
+                    document.getElementById('overwriteWarningMsg').innerHTML =
+                        `⚠️ Ya hay datos cargados para <strong>${names}</strong>. ¿Deseas sobreescribirlos?`;
+                    document.getElementById('overwriteWarning').style.display = 'block';
+                    document.getElementById('proceedBtn').style.display = 'none';
+                    this.pendingImport._pendingMonths = months;
+                    return;
                 }
+
+                this._doProcessFile(months);
+            },
+
+            _doProcessFile(months) {
+                this.pendingImport.months = months;
 
                 const grouped = {};
                 this.pendingImport.raw.forEach(row => {
@@ -1034,6 +1074,17 @@
 
             commitImport() {
                 const months = this.pendingImport.months || [];
+
+                // Clear existing data for months being overwritten
+                months.forEach(mKey => {
+                    if (this.currentData.metadata.monthsLoaded.includes(mKey)) {
+                        Object.values(this.currentData.clients).forEach(client => {
+                            delete client.monthlyData[mKey];
+                        });
+                        this.currentData.metadata.monthsLoaded =
+                            this.currentData.metadata.monthsLoaded.filter(m => m !== mKey);
+                    }
+                });
 
                 // Build per-client, per-month counts
                 const countByClientMonth = {};
