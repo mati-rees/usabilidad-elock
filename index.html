@@ -1531,7 +1531,13 @@
             },
 
             downloadJSON() {
-                const dataStr = JSON.stringify(this.currentData, null, 2);
+                // Use DataStore to ensure we have the latest Firestore data
+                const data = DataStore.get();
+                if (!data) {
+                    alert('No hay datos para descargar');
+                    return;
+                }
+                const dataStr = JSON.stringify(data, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1541,10 +1547,16 @@
             },
 
             downloadCSV() {
-                const months = this.currentData.metadata.monthsLoaded;
+                // Use DataStore to ensure we have the latest Firestore data
+                const data = DataStore.get();
+                if (!data) {
+                    alert('No hay datos para descargar');
+                    return;
+                }
+                const months = data.metadata.monthsLoaded;
                 const rows = [['Cliente', 'Tipo', ...months]];
 
-                Object.values(this.currentData.clients).forEach(client => {
+                Object.values(data.clients).forEach(client => {
                     const row = [client.displayName, client.type];
                     months.forEach(month => {
                         row.push(client.monthlyData[month] || 0);
@@ -1633,7 +1645,17 @@
             downloadClientCSV() {
                 const id = this._editingClientId;
                 if (!id) return;
-                const client = this.currentData.clients[id];
+                // Use DataStore to ensure we have the latest Firestore data
+                const data = DataStore.get();
+                if (!data) {
+                    alert('No hay datos para descargar');
+                    return;
+                }
+                const client = data.clients[id];
+                if (!client) {
+                    alert('Cliente no encontrado');
+                    return;
+                }
                 const months = Object.keys(client.monthlyData).sort();
                 const rows = [['Mes', 'Retiros'], ...months.map(m => [formatMonthLabel(m), client.monthlyData[m]])];
                 const csv = rows.map(r => r.join(',')).join('\n');
@@ -1649,19 +1671,21 @@
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 // Initialize DataStore (Firestore) and wait for it to load
-                await dataStore.init();
+                await DataStore.init();
                 console.log('DataStore initialized with Firestore');
 
                 // Initialize UI after data is loaded
                 UI.init();
 
                 // Subscribe to data changes for real-time UI updates
-                dataStore.onChange((updatedData) => {
+                DataStore.onChange((updatedData) => {
                     console.log('Data changed in Firestore, refreshing UI...');
+                    // Update UI's local copy to match DataStore
+                    UI.currentData = updatedData;
                     if (UI.refresh) {
                         UI.refresh();
                     } else {
-                        UI.renderDashboard();
+                        UI.render();
                     }
                 });
 
