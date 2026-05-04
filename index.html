@@ -1646,7 +1646,30 @@
         };
 
         // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => UI.init());
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Initialize DataStore (Firestore) and wait for it to load
+                await dataStore.init();
+                console.log('DataStore initialized with Firestore');
+
+                // Initialize UI after data is loaded
+                UI.init();
+
+                // Subscribe to data changes for real-time UI updates
+                dataStore.onChange((updatedData) => {
+                    console.log('Data changed in Firestore, refreshing UI...');
+                    if (UI.refresh) {
+                        UI.refresh();
+                    } else {
+                        UI.renderDashboard();
+                    }
+                });
+
+            } catch (error) {
+                console.error('App initialization failed:', error);
+                alert('Failed to load data. Please refresh the page.');
+            }
+        });
     </script>
 </body>
 </html>
