@@ -881,21 +881,63 @@
                 return m ? `${m[3]}-${m[2]}` : null;
             },
 
+            findDateColumn(row) {
+                // Look for date column in common names first
+                const dateColumnNames = ['Creado', 'creado', 'Fecha', 'fecha', 'Date', 'date'];
+                for (const name of dateColumnNames) {
+                    if (row[name] && this.parseFecha(row[name])) {
+                        return name;
+                    }
+                }
+
+                // If not found, search all columns for date format
+                for (const [key, value] of Object.entries(row)) {
+                    if (value && this.parseFecha(value)) {
+                        return key;
+                    }
+                }
+
+                return null;
+            },
+
+            findClientColumn(row) {
+                // Look for client column in common names
+                const clientColumnNames = ['Cliente', 'cliente', 'Nombre', 'nombre', 'Client', 'client'];
+                for (const name of clientColumnNames) {
+                    if (row[name]) return name;
+                }
+
+                // Return first non-empty column as fallback
+                return Object.keys(row)[0];
+            },
+
             parse(csvData) {
                 return new Promise((resolve, reject) => {
                     Papa.parse(csvData, {
                         header: true,
                         skipEmptyLines: true,
                         complete: (results) => {
+                            if (results.data.length === 0) {
+                                resolve([]);
+                                return;
+                            }
+
+                            const firstRow = results.data[0];
+                            const dateColumn = this.findDateColumn(firstRow);
+                            const clientColumn = this.findClientColumn(firstRow);
+
                             const parsed = results.data.map(row => {
-                                const fecha = row['Creado'] || row['creado'] || '';
+                                const fecha = dateColumn ? row[dateColumn] : '';
+                                const cliente = clientColumn ? row[clientColumn] : '';
+
                                 return {
-                                    cliente: row['Cliente'] || row['cliente'] || '',
-                                    tipo: row['Tipo Empresa'] || row['tipo_empresa'] || 'Desconocido',
+                                    cliente,
+                                    tipo: row['Tipo Empresa'] || row['tipo_empresa'] || row['Tipo'] || row['tipo'] || 'Desconocido',
                                     fecha,
-                                    monthKey: CSVParser.parseFecha(fecha)
+                                    monthKey: this.parseFecha(fecha)
                                 };
-                            }).filter(r => r.cliente);
+                            }).filter(r => r.cliente && r.monthKey);
+
                             resolve(parsed);
                         },
                         error: (error) => reject(error)
@@ -1529,7 +1571,7 @@
             },
 
             downloadJSON() {
-                // Use DataStore to ensure we have the latest Firestore data
+                // Use DataStore to ensure we have the latest data from IndexedDB
                 const data = DataStore.get();
                 if (!data) {
                     alert('No hay datos para descargar');
@@ -1545,7 +1587,7 @@
             },
 
             downloadCSV() {
-                // Use DataStore to ensure we have the latest Firestore data
+                // Use DataStore to ensure we have the latest data from IndexedDB
                 const data = DataStore.get();
                 if (!data) {
                     alert('No hay datos para descargar');
@@ -1674,7 +1716,7 @@
             downloadClientCSV() {
                 const id = this._editingClientId;
                 if (!id) return;
-                // Use DataStore to ensure we have the latest Firestore data
+                // Use DataStore to ensure we have the latest data from IndexedDB
                 const data = DataStore.get();
                 if (!data) {
                     alert('No hay datos para descargar');
@@ -1699,16 +1741,19 @@
         // Initialize on load
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Initialize DataStore (Firestore) and wait for it to load
+                console.log('Starting dashboard initialization...');
+
+                // Initialize DataStore with IndexedDB
                 await DataStore.init();
-                console.log('DataStore initialized with IndexedDB');
+                console.log('✓ DataStore initialized with IndexedDB');
 
                 // Initialize UI after data is loaded
                 UI.init();
+                console.log('✓ UI initialized successfully');
 
                 // Subscribe to data changes for real-time UI updates
                 DataStore.onChange((updatedData) => {
-                    console.log('Data changed in Firestore, refreshing UI...');
+                    console.log('Data updated, refreshing UI...');
                     // Update UI's local copy to match DataStore
                     UI.currentData = updatedData;
                     if (UI.refresh) {
@@ -1719,8 +1764,9 @@
                 });
 
             } catch (error) {
-                console.error('App initialization failed:', error);
-                alert('Failed to load data. Please refresh the page.');
+                console.error('❌ App initialization failed:', error);
+                console.error('Error stack:', error.stack);
+                alert('Failed to load data: ' + error.message);
             }
         });
     </script>
