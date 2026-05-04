@@ -778,8 +778,9 @@
 
                     if (data) {
                         this.currentData = data;
+                        console.log('Loaded data from IndexedDB');
                     } else {
-                        // Check if there's old localStorage data to migrate
+                        // Try to load from localStorage (for migration)
                         const localData = localStorage.getItem('elock_usability_data');
                         if (localData) {
                             try {
@@ -788,24 +789,36 @@
                                 await IndexedDBHelper.save(this.currentData);
                             } catch (e) {
                                 console.error('Failed to parse localStorage data:', e);
+                                this.currentData = null;
+                            }
+                        }
+
+                        // If still no data, try to load from GitHub
+                        if (!this.currentData) {
+                            try {
+                                console.log('Attempting to load latest.json from GitHub...');
+                                const response = await fetch('./data/latest.json');
+                                if (response.ok) {
+                                    this.currentData = await response.json();
+                                    console.log('Successfully loaded data from latest.json');
+                                    await IndexedDBHelper.save(this.currentData);
+                                } else {
+                                    throw new Error(`HTTP ${response.status}`);
+                                }
+                            } catch (e) {
+                                console.warn('Could not load latest.json, using empty data:', e);
                                 this.currentData = {
-                                    metadata: { lastUpdated: new Date().toISOString(), monthsLoaded: [] },
+                                    metadata: {
+                                        lastUpdated: new Date().toISOString(),
+                                        monthsLoaded: []
+                                    },
                                     clients: {},
                                     mergeHistory: []
                                 };
                             }
-                        } else {
-                            // Initialize empty structure if no data exists
-                            this.currentData = {
-                                metadata: {
-                                    lastUpdated: new Date().toISOString(),
-                                    monthsLoaded: []
-                                },
-                                clients: {},
-                                mergeHistory: []
-                            };
                         }
-                        // Save to IndexedDB
+
+                        // Save to IndexedDB (even if empty)
                         await IndexedDBHelper.save(this.currentData);
                     }
 
